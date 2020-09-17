@@ -1,0 +1,5 @@
+install.packages("rtweet")
+install.packages("stringr")
+install.packages("yaml")
+install.packages("optparse")
+install.packages("AzureStor")

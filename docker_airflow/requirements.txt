@@ -1,0 +1,6 @@
+azure-storage-blob==12.4.0
+pyyaml==5.1.2
+pandas==0.25.3
+requests==2.21.0
+numpy==1.19.1
+nltk==3.4.5
