@@ -19,5 +19,5 @@ It's easy to setup COVID19 Pipeline which we can setup either locally or on Azur
 |------|-----------------------|
 | 1    | [Apache Airflow Docker Image](https://github.com/puckel/docker-airflow) |
 | 2    | [Airflow Learn Resource](https://www.applydatascience.com/airflow/airflow-tutorial-introduction/) |
-| 3    | [Azure Storage with Python](https://d cs.microsoft.com/en-us/python/api/azure-storage-blob/azure.storage.blob.blobclient?view=azure-python) |
+| 3    | [Azure Storage with Python](https://docs.microsoft.com/en-us/python/api/azure-storage-blob/azure.storage.blob.blobclient?view=azure-python) |
 
