@@ -3,9 +3,9 @@ COVID19 Pipeline
 
 It's easy to setup COVID19 Pipeline which we can setup either locally or on Azure Server.
 
-## Tools and Techniques Used:
+## Tools:
 - Airflow: Workflow management for ETL pipeline
-- Azure: Azure Database Storage and Virtual Machine
+- Azure Server: Azure Database Storage and Virtual Machine
 - NRC: Emotion Lexicons for Sentiment Analysis
 
 ## Data:
