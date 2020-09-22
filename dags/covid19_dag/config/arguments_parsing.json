@@ -3,7 +3,7 @@
 		"database": "local",
 		"location": "California, USA;NY, USA;Texas, USA",
 		"tweets": 1000,
-		"config_path": "~/projects/config/config_abhishek.yml"
+		"config_path": "/usr/local/airflow/projects/config/config_abhishek.yml"
 	},
 	"tweets_processing_variables": {
 		"storage": "single",

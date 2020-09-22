@@ -4,12 +4,10 @@
 # BUILD: docker build --rm -t puckel/docker-airflow .
 # SOURCE: https://github.com/puckel/docker-airflow
 
-FROM python:3.7-slim-buster
-COPY requirements.txt requirements.txt
-RUN pip install -r requirements.txt
-FROM rocker/r-base:latest
-COPY requirements.R requirements.R
-RUN Rscript requirements.R
+#FROM python:3.7-slim-buster
+#COPY requirements.txt requirements.txt
+#RUN pip install -r requirements.txt
+#FROM rocker/r-base:latest
 
 FROM python:3.7-slim-buster
 LABEL maintainer="Puckel_"
@@ -32,20 +30,28 @@ ENV LC_ALL en_US.UTF-8
 ENV LC_CTYPE en_US.UTF-8
 ENV LC_MESSAGES en_US.UTF-8
 
+# Copy requirements files for R and Python scripts
+COPY requirements.txt requirements.txt
+COPY requirements.R requirements.R
 
 # Disable noisy "Handling signal" log messages:
 # ENV GUNICORN_CMD_ARGS --log-level WARNING
-
+#        libssl-dev \
 RUN set -ex \
     && buildDeps=' \
         freetds-dev \
         libkrb5-dev \
         libsasl2-dev \
-        libssl-dev \
         libffi-dev \
         libpq-dev \
         git \
     ' \
+    # for curl package in R on which rtweet package is dependent
+    && apt-get update -y \
+    && apt-get install -y \
+        libcurl4-openssl-dev \
+        libssl-dev \
+        libxml2-dev \
     && apt-get update -yqq \
     && apt-get upgrade -yqq \
     && apt-get install -yqq --no-install-recommends \
@@ -58,6 +64,7 @@ RUN set -ex \
         rsync \
         netcat \
         locales \
+        r-base \
     && sed -i 's/^# en_US.UTF-8 UTF-8$/en_US.UTF-8 UTF-8/g' /etc/locale.gen \
     && locale-gen \
     && update-locale LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 \
@@ -69,6 +76,7 @@ RUN set -ex \
     && pip install pyasn1 \
     && pip install apache-airflow[crypto,celery,postgres,hive,jdbc,mysql,ssh${AIRFLOW_DEPS:+,}${AIRFLOW_DEPS}]==${AIRFLOW_VERSION} \
     && pip install 'redis==3.2' \
+    && pip install -r requirements.txt \
     && if [ -n "${PYTHON_DEPS}" ]; then pip install ${PYTHON_DEPS}; fi \
     && apt-get purge --auto-remove -yqq $buildDeps \
     && apt-get autoremove -yqq --purge \
@@ -79,7 +87,8 @@ RUN set -ex \
         /var/tmp/* \
         /usr/share/man \
         /usr/share/doc \
-        /usr/share/doc-base
+        /usr/share/doc-base \
+    &&  /usr/bin/Rscript requirements.R
 
 COPY script/entrypoint.sh /entrypoint.sh
 COPY config/airflow.cfg ${AIRFLOW_USER_HOME}/airflow.cfg

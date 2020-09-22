@@ -37,34 +37,34 @@ dag = DAG(
     schedule_interval=timedelta(days=1)
 )
 
-# twitter = BashOperator(
-#     task_id='Tweets_Scrapping',
-#     bash_command=f'Rscript /usr/local/airflow/projects/tweets_scraper.R -d {database} \
-#                 -l "{location}" -n {tweets} -c {config_path}',
-#     dag=dag
-# )
-#
-# tweet_cleaning = BashOperator(
-#     task_id='Tweets_preprocessing',
-#     bash_command=f'python3 /usr/local/airflow/projects/tweets_processing.py -s {storage} \
-#                  -i {incremental} -c {config_path} -l {location} \
-#                  -r {region}',
-#     dag=dag
-# )
-#
-# aggregation = BashOperator(
-#     task_id='Day_Level_Aggregation',
-#     bash_command=f'python3 /usr/local/airflow/projects/day_level_aggregation.py -c {config_path } \
-#                  -s {agg_storage} -i {agg_incremental}',
-#     dag=dag
-# )
-
-# Scraping Covid Cases Deaths Information from news website'
-covid_case_deaths = BashOperator(
-    task_id='Covid_Cases_Deaths',
-    bash_command=f'python3 /usr/local/airflow/projects/covid_cases_deaths_info.py -c {config_path}',
+twitter = BashOperator(
+    task_id='Tweets_Scrapping',
+    bash_command=f'Rscript /usr/local/airflow/projects/tweets_scraper.R -d {database} \
+                -l "{location}" -n {tweets} -c {config_path}',
     dag=dag
 )
+#
+tweet_cleaning = BashOperator(
+    task_id='Tweets_preprocessing',
+    bash_command=f'python3 /usr/local/airflow/projects/tweets_processing.py -s {storage} \
+                 -i {incremental} -c {config_path} -l "{location}" \
+                 -r "{region}"',
+    dag=dag
+)
+
+aggregation = BashOperator(
+    task_id='Day_Level_Aggregation',
+    bash_command=f'python3 /usr/local/airflow/projects/day_level_aggregation.py -c {config_path } \
+                 -s {agg_storage} -i {agg_incremental}',
+    dag=dag
+)
+
+# Scraping Covid Cases Deaths Information from news website'
+# covid_case_deaths = BashOperator(
+#     task_id='Covid_Cases_Deaths',
+#     bash_command=f'python3 /usr/local/airflow/projects/covid_cases_deaths_info.py -c {config_path}',
+#     dag=dag
+# )
 
 # combining = BashOperator(
 #     task_id='Combining data from all sources',
@@ -72,7 +72,7 @@ covid_case_deaths = BashOperator(
 #     dag=dag
 # )
 
-# twitter >> tweet_cleaning
-# tweet_cleaning >> aggregation
+twitter >> tweet_cleaning
+tweet_cleaning >> aggregation
 # covid_case_deaths >> combining
 #

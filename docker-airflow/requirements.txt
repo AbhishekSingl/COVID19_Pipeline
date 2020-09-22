@@ -4,3 +4,4 @@ pandas==0.25.3
 requests==2.21.0
 numpy==1.19.1
 nltk==3.4.5
+xlrd>=1.0.0
