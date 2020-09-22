@@ -15,7 +15,7 @@ It's easy to setup COVID19 Pipeline which we can setup either locally or on Azur
 
 ## Resources
 
-| Part |      References       |
+| SNO |      References       |
 |------|-----------------------|
 | 1    | [Apache Airflow Docker Image](https://github.com/puckel/docker-airflow) |
 | 2    | [Airflow Learn Resource](https://www.applydatascience.com/airflow/airflow-tutorial-introduction/) |
