@@ -1,0 +1,25 @@
+# Twitter Credentials
+twitter_app: "App Name"
+access_token: xxxxxxxx-xxxxxxxxxxxxxxxxxxxxxxxxxx
+access_token_secret: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+api_key: xxxxxxxxxxxxxxx
+api_secret_key: xxxxxxxxxxxxxx
+
+# Database location - local or azure
+database: local
+
+# Azure Configuration
+blob_endpoint: xxxxxxxxxxxxxxx
+container: xxxxxxx
+sas_key: xxxxxxxxxxxx
+azure_path: covid19/data
+connection_string: "xxxxxxxxxxxxxxxxxxx"
+
+# Local Storage
+local_path: /usr/local/airflow/projects/data
+
+# Google API Key to extract location data
+google_api_key: xxxxxxxxxxx
+
+# Twitter Queries - Kindly separate all search queries with OR 
+query: "#covid19 OR #coronavirus"

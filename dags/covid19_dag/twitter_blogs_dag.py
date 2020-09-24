@@ -15,6 +15,7 @@ default_args = {
     'retry_delay': timedelta(minutes=5)
 }
 
+# Defining Variables
 tweets_parsing_config = Variable.get("tweets_parsing_variables", deserialize_json=True)
 database = tweets_parsing_config["database"]
 location = tweets_parsing_config["location"]
@@ -37,6 +38,7 @@ dag = DAG(
     schedule_interval=timedelta(days=1)
 )
 
+# Scraping Tweets
 twitter = BashOperator(
     task_id='Tweets_Scrapping',
     bash_command=f'Rscript /usr/local/airflow/projects/tweets_scraper.R -d {database} \
@@ -44,6 +46,7 @@ twitter = BashOperator(
     dag=dag
 )
 
+# Preprocessing Tweets
 tweet_cleaning = BashOperator(
     task_id='Tweets_preprocessing',
     bash_command=f'python3 /usr/local/airflow/projects/tweets_processing.py -s {storage} \
@@ -52,6 +55,7 @@ tweet_cleaning = BashOperator(
     dag=dag
 )
 
+# Aggregating data at day level
 aggregation = BashOperator(
     task_id='Day_Level_Aggregation',
     bash_command=f'python3 /usr/local/airflow/projects/day_level_aggregation.py -c {config_path } \
