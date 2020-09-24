@@ -5,10 +5,11 @@ Here, we've built an end-to-end ML pipeline where we're extracting data from Twi
 
 ## Setup
 It's easy to setup COVID19 Pipeline which we can setup either locally or on Azure Server.
-1. sh run_pipeline
-2. import json file from **dags/covid19_dag/config/arguments_parsing.json** into Airflow environment.
-3. Change the variables according to your requirements.
-4. Trigger the dag and you'll see below results at some point.
+1. RUN command **sh run_pipeline.sh** in terminal/cmd.
+2. Once it start running then open **localhost:8080** in any browser.
+3. Import json file from **dags/covid19_dag/config/arguments_parsing.json** into Airflow environment (under variables section).
+4. Change the variables according to your requirements.
+5. Trigger the dag and you'll see below results at some point.
 
 ![COVID Dag:](https://github.com/AbhishekSingl/COVID19_Pipeline/blob/master/dags/COVID19_Dag.png)
 
@@ -17,7 +18,7 @@ It's easy to setup COVID19 Pipeline which we can setup either locally or on Azur
 - Azure Server: Azure Database Storage and Virtual Machine
 - NRC: Emotion Lexicons for Sentiment Analysis
 
-## Data:
+## Data Sources:
 - Twitter API
 - Covid Cases, Deaths, and Recovered Info (Atlantic) 
 - DOD Actions taken in favour of COVID19 (DOD)
