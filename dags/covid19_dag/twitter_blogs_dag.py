@@ -43,7 +43,7 @@ twitter = BashOperator(
                 -l "{location}" -n {tweets} -c {config_path}',
     dag=dag
 )
-#
+
 tweet_cleaning = BashOperator(
     task_id='Tweets_preprocessing',
     bash_command=f'python3 /usr/local/airflow/projects/tweets_processing.py -s {storage} \
@@ -60,19 +60,19 @@ aggregation = BashOperator(
 )
 
 # Scraping Covid Cases Deaths Information from news website'
-# covid_case_deaths = BashOperator(
-#     task_id='Covid_Cases_Deaths',
-#     bash_command=f'python3 /usr/local/airflow/projects/covid_cases_deaths_info.py -c {config_path}',
-#     dag=dag
-# )
+covid_case_deaths = BashOperator(
+    task_id='Covid_Cases_Deaths',
+    bash_command=f'python3 /usr/local/airflow/projects/covid_cases_deaths_info.py -c {config_path}',
+    dag=dag
+)
 
-# combining = BashOperator(
-#     task_id='Combining data from all sources',
-#     bash_command='python3 /usr/local/airflow/projects/day_level_aggregation.py',
-#     dag=dag
-# )
+# Combining_data from all sources
+combining = BashOperator(
+    task_id='Combining_all_sources',
+    bash_command=f'python3 /usr/local/airflow/projects/day_level_aggregation.py -c {config_path} -s {agg_storage}',
+    dag=dag
+)
 
 twitter >> tweet_cleaning
 tweet_cleaning >> aggregation
-# covid_case_deaths >> combining
-#
+[covid_case_deaths, aggregation] >> combining
