@@ -9,6 +9,7 @@ It's easy to setup COVID19 Pipeline which we can setup either locally or on Azur
 2. import json file from **dags/covid19_dag/config/arguments_parsing.json** into Airflow environment.
 3. Change the variables according to your requirements.
 4. Trigger the dag
+
 ![COVID Dag:](https://github.com/AbhishekSingl/COVID19_Pipeline/blob/master/dags/COVID19_Dag.png)
 
 ## Tools Used:
