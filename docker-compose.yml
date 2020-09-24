@@ -26,10 +26,6 @@ services:
     volumes:
       - ./dags:/usr/local/airflow/dags
       - ./src:/usr/local/airflow/projects/
-#      - /Library/Frameworks/R.framework/Resources/bin/:/usr/local/airflow/rscript
-#      - /Library/Frameworks/Python.framework/Versions/3.6/bin:/usr/local/airflow/python/
-#      - ./examples/MyFirstDAG/dags:/usr/local/airflow/dags
-
       # Uncomment to include custom plugins
       # - ./plugins:/usr/local/airflow/plugins
     ports:
