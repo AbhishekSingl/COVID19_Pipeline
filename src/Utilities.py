@@ -1,5 +1,8 @@
 # Source:
 # https://docs.microsoft.com/en-us/python/api/azure-storage-blob/azure.storage.blob.blobclient?view=azure-python
+# Reference for converting timezone:
+# https://www.saltycrane.com/blog/2009/05/converting-time-zones-datetime-objects-python/
+
 import pickle
 import yaml
 import pandas as pd
@@ -8,11 +11,16 @@ from azure.core.exceptions import ResourceNotFoundError
 import glob
 import os
 import sys
+from pytz import timezone
+import time
+from dateutil.parser import parse
 
 DATABASE = ''
 CONNECTION_STR = ''
 CONTAINER = ''
 TEMP_PATH = ''
+TIMEZONE = 'US/Eastern'
+
 
 def load_config(config_path):
     global DATABASE, CONNECTION_STR, CONTAINER, TEMP_PATH
@@ -34,6 +42,7 @@ def load_config(config_path):
     os.environ['DAILY_DATA_PATH'] = PATH + '/aggregate'
     TEMP_PATH = os.environ['TEMP_PATH'] = './intermediary'
     os.environ['GOOGLE_API_KEY'] = config['google_api_key']
+    os.environ['TIMEZONE'] = TIMEZONE
 
 
     if DATABASE == 'local':
@@ -164,3 +173,14 @@ def exists(file):
         return True
     elif DATABASE == "local":
         return os.path.exists(file)
+
+
+def get_modified_time(file):
+    if DATABASE == 'azure':
+        blob = BlobClient.from_connection_string(conn_str=CONNECTION_STR,
+                                                 container_name=CONTAINER,
+                                                 blob_name=file)
+        return blob.get_blob_properties()['last_modified'].astimezone(timezone(TIMEZONE))
+    elif DATABASE == 'local':
+        return parse(str(time.ctime(os.path.getmtime(file)))).replace(
+            tzinfo=timezone('US/Eastern'))
