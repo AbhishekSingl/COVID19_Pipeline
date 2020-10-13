@@ -8,6 +8,8 @@ import requests
 import numpy as np
 from Utilities import store_file, retrieve_file, exists
 import os
+import warnings
+warnings.simplefilter('ignore')
 
 FLAT_FILES_PATH = os.getenv('FLAT_FILES_PATH')
 PROCESSED_PATH = os.getenv('PROCESSED_PATH')
@@ -128,7 +130,7 @@ def coord(df, flag='None', col_name='None'):
     df['lat'] = df[col_name].str.split(' ').apply(lambda x: np.mean(list(map(float, x[4:])))).astype(str)
 
     df = df.merge(address_info, how='left', left_on=['lat', 'lng'], right_on=['lat', 'lng'])
-
+    df['flag'] = 'Success'
     return df
 
 
@@ -159,32 +161,32 @@ def retweetLoc(df, flag='None', col_name='None'):
                 if (d['country'] == '') and (
                         loc in ['usa', 'united states', 'us', 'united states of america', 'america']):
                     d['country'] = 'US'
-                    d['flag'] = 0
+                    d['flag'] = 'Success'
                 elif (d['state'] == '') and (loc in state_dict.keys()):
                     d['state'] = (((len(loc) > 2) and state_dict[loc]) or loc)
                     d['country'] = 'US'
-                    d['flag'] = 0
+                    d['flag'] = 'Success'
                 elif (d['county'] == '') and (d['state'] != '') and (
                         (loc in county_dict[d['state']]) or (loc in county_transformed_dict[d['state']])):
                     d['county'] = loc
-                    d['flag'] = 0
+                    d['flag'] = 'Success'
                 elif (d['state'] != '') and (loc in city_dict[d['state']]):
                     d['city'] = loc
                     d['country'] = 'US'
                     d['county'] = \
                         cities[(cities['city'] == loc) * (cities['state_id'] == d['state'])]['county_name'].iloc[0]
-                    d['flag'] = 0
+                    d['flag'] = 'Success'
                 elif ((RTweetLoc['len'].iloc[itr] == 1) or (d['country'] == 'US')) and (loc in list(cities['city'])):
                     d['city'] = loc
                     d['country'] = 'US'
-                    d['flag'] = 0
+                    d['flag'] = 'Success'
                     d['state'] = (cities[cities['city'] == loc]['state_id'].iloc[0])
                     d['county'] = (cities[cities['city'] == loc]['county_name'].iloc[0])
-                elif d['flag'] != 0:
-                    d['flag'] = 1
+                elif d['flag'] != 'Success':
+                    d['flag'] = 'Conditions Not Met'
         except Exception as e:
             print(e, "\nContinuing.")
-            d['flag'] = -1
+            d['flag'] = 'Exception'
 
         d['state'] = d['state'].upper()
 
@@ -195,6 +197,8 @@ def retweetLoc(df, flag='None', col_name='None'):
 
     RTweetLoc.drop(['Separated', 'len'], axis=1, inplace=True)
     RTweetInfo = pd.concat([RTweetLoc, pd.DataFrame(RTweet_List)], axis=1)
+    df['lng'] = 'NA'
+    df['lat'] = 'NA'
     df = df.merge(RTweetInfo, how='left', right_on='Location', left_on=col_name)
     df.drop('Location', axis=1, inplace=True)
 
@@ -242,10 +246,13 @@ def geo_tagging(df, region):
     final_df = []
 
     if sum(df['Flag_Loc'] == 'GeoCoord') > 0:
+        print(' Getting GeoCoding Info')
         final_df.append(coord(df, flag='GeoCoord', col_name='bbox_coords'))
     if sum(df['Flag_Loc'] == 'ReTweetLoc') > 0:
+        print(' Processing RetweetLoc')
         final_df.append(retweetLoc(df, flag='ReTweetLoc', col_name='retweet_location'))
     if sum(df['Flag_Loc'] == 'UserProfileLoc') > 0:
+        print(' Processing UserProfileLoc')
         final_df.append(retweetLoc(df, flag='UserProfileLoc', col_name='location'))
 
     final_df = pd.concat(final_df, axis=0, sort=False)
