@@ -1,11 +1,13 @@
-import copy
+import warnings
 import os
 import pandas as pd
 import argparse
 from collections import defaultdict
 import re
+from pytz import timezone
 import datetime
-from Utilities import load_config, store_file, retrieve_file, list_files, exists
+from Utilities import load_config, store_file, retrieve_file, list_files, exists, get_modified_time
+warnings.simplefilter('ignore')
 os.chdir(os.getcwd())
 
 # Global Variables
@@ -70,7 +72,7 @@ def week_min_max_date_dict(dates_df, year):
     return calendar_dict
 
 
-def data_preprocessing(filepath, filename, req_col):
+def data_preprocessing(filepath, filename, req_col, emotions):
     """
     We're doing following tasks in the function:
     1. Keeping tweets with "English" language"
@@ -79,6 +81,7 @@ def data_preprocessing(filepath, filename, req_col):
     3. Creating a "Cleaned Text" column after removing all special characters and spaces.
     4. Emotion classification using NRC classifier.
 
+    :param emotions: emotions class object
     :param filepath: file path of raw data files.
     :param filename: file name of each raw file.
     :param req_col: passing a list of important columns
@@ -103,18 +106,19 @@ def data_preprocessing(filepath, filename, req_col):
     # Creating week
     data['week'] = pd.to_datetime(data['date']).dt.week
     # Emotional features
-    emotion_info = get_emotions(data.cleaned_text)
+    emotion_info = emotions.get_emotions(data.cleaned_text)
     # Combining emotion_info to dataframe
     data = pd.concat([data, emotion_info], axis=1)
 
     return data
 
 
-def main(storage, locations, region, incremental=True):
+def main(storage, locations, region, incremental=True, nfiles=-1):
     """
     Data cleaning, emotion classification and extracting geo information from multiple columns by
     assigning value into "city", "state", "county" and "country".
 
+    :param nfiles: Number of files to be processed; Just for debugging and testing purpose.
     :param storage: this defines whether you want to store processed data in a "Single" file
     or break into "Weekly" files i.e. 4 files every month.
     :param locations: list of locations for which you fetched the data using Twitter API. Make sure location details
@@ -126,70 +130,85 @@ def main(storage, locations, region, incremental=True):
     req_col = ['user_id', 'screen_name', 'status_id', 'created_at',
                'text', 'source', 'is_retweet', 'retweet_count', 'hashtags', 'status_url',
                'urls_t.co', 'lang', 'retweet_created_at', 'verified', 'retweet_location', 'location', 'bbox_coords']
-    all_tables = []
+    Prog_Started_at = datetime.datetime.now(timezone(os.getenv('TIMEZONE')))
     for loc in locations:
-        tables = []
+        files_processed = []
         filepath = f"{PATH}/{loc}"
         filenames = list_files(filepath)
         # Incremental loading
         if incremental and exists(f"{PROCESSED_PATH}/files_{loc}.pkl"):
             # Checking if any new file exist. If so, process only that file instead of processing all files again.
-            old_filenames = retrieve_file(PROCESSED_PATH, "files_{}.pkl".format(loc))
-            org_filenames = copy.copy(filenames)
-            filenames = list(set(filenames) - set(old_filenames))
-            if len(filenames) > 0:
-                store_file(org_filenames, PROCESSED_PATH, "files_{}.pkl".format(loc))
-                del org_filenames
-            else:
+            files_processed = retrieve_file(PROCESSED_PATH, "files_{}.pkl".format(loc))
+            filenames = list(set(filenames) - set(files_processed))
+            if len(filenames) == 0:
                 print('No new file is present.')
                 return
-        else:
-            store_file(filenames, PROCESSED_PATH, "files_{}.pkl".format(loc))
+
+        # Removing files contain "last_tweet" and "first_tweet" in filename
+        temp = []
+        for file in filenames:
+            if ('last_tweet' not in file) and ('first_tweet' not in file):
+                temp.append(file)
+        filenames = temp.copy()
+
+        # In case you want to run the complete code for specified number of files
+        if nfiles > 0:
+            filenames = filenames[:min(len(filenames), nfiles)]
+
+        # Creating Emotions object
+        emotions = Emotions()
 
         print("--Processing following file(s) for location: {}".format(loc))
         for file in filenames:
-            if ('last_tweet' not in file) and ('first_tweet' not in file):
-                print(file)
-                tables.append(data_preprocessing(filepath, file, req_col))
-        data = pd.concat(tables, axis=0, sort=False)
+            print(file)
+            data = data_preprocessing(filepath, file, req_col, emotions)
 
-        data = data[~data.status_id.duplicated()].reset_index(drop=True)
+            data = data[~data.status_id.duplicated()].reset_index(drop=True)
 
-        # Geotagging
-        data = geo_tagging(data, region)
+            # Geotagging
+            data = geo_tagging(data, region)
 
-        # Changing the order of "Text" column and keeping it as the last column
-        text_info = data['text']
-        data.drop('text', axis=1, inplace=True)
-        data['text'] = text_info
-        del text_info
+            # Changing the order of "Text" column and keeping it as the last column
+            text_info = data['text']
+            data.drop('text', axis=1, inplace=True)
+            data['text'] = text_info
+            del text_info
 
-        # Combining data for available locations.
-        all_tables.append(data)
+            if 'single' in storage:
+                create_new_file = (not exists(f'{PROCESSED_PATH}/Processed_Tweets.csv')) \
+                                  or \
+                                  (
+                                        (not incremental)
+                                        and
+                                        Prog_Started_at > get_modified_time(f'{PROCESSED_PATH}/Processed_Tweets.csv')
+                                  )
+                store_file(data, PROCESSED_PATH, 'Processed_Tweets.csv', sep='\t', mode='a', header=create_new_file)
 
-    print('--Storing')
-    data = pd.concat(all_tables, axis=0, sort=False)
+            if 'weekly' in storage:
+                if exists(f'{PROCESSED_PATH}/week_min_max_dict_{CURRENT_YEAR}.pkl'):
+                    calendar = retrieve_file(PROCESSED_PATH, 'week_min_max_dict_{}.pkl'.format(CURRENT_YEAR))
+                else:
+                    dates = calendar_generation(CURRENT_YEAR)
+                    calendar = week_min_max_date_dict(dates, CURRENT_YEAR)
 
-    if 'single' in storage:
-        file_exist = (not exists(f'{PROCESSED_PATH}/Processed_Tweets.csv')) or (not incremental)
-        store_file(data, PROCESSED_PATH, 'Processed_Tweets.csv', sep='\t', mode='a', header=file_exist)
+                # Dividing data into weeks.
+                for w in data['week'].unique():
+                    weekly_df = data[data['week'] == w]
 
-    if 'weekly' in storage:
-        if exists(f'{PROCESSED_PATH}/week_min_max_dict_{CURRENT_YEAR}.pkl'):
-            calendar = retrieve_file(PROCESSED_PATH, 'week_min_max_dict_{}.pkl'.format(CURRENT_YEAR))
-        else:
-            dates = calendar_generation(CURRENT_YEAR)
-            calendar = week_min_max_date_dict(dates, CURRENT_YEAR)
+                    filename = 'Week{}_{}_{}.csv'.format(w, calendar[w]['min_date'], calendar[w]['max_date'])
+                    file = '{}/{}'.format(WEEKLY_DATA_PATH, filename)
 
-        # Dividing data into weeks.
-        for w in data['week'].unique():
-            weekly_df = data[data['week'] == w]
+                    create_new_file = (not exists(file)) or \
+                                      (
+                                              (not incremental)
+                                              and
+                                              Prog_Started_at > get_modified_time(file)
+                                      )
+                    store_file(weekly_df, WEEKLY_DATA_PATH, filename, '\t', mode='a', header=create_new_file)
 
-            filename = 'Week{}_{}_{}.csv'.format(w, calendar[w]['min_date'], calendar[w]['max_date'])
-            file = '{}/{}'.format(WEEKLY_DATA_PATH, filename)
-
-            file_exist = (not exists(file)) or (not incremental)
-            store_file(weekly_df, WEEKLY_DATA_PATH, filename, '\t', mode='a', header=file_exist)
+            files_processed.append(file)
+            store_file(files_processed, PROCESSED_PATH, "files_{}.pkl".format(loc))
+            print(' Stored')
 
 
 if __name__ == '__main__':
@@ -205,12 +224,16 @@ if __name__ == '__main__':
                              'USA;Texas, Austin, USA"')
     parser.add_argument('-r', '--region', type=str.lower, help='country name',
                         default="usa")
+    parser.add_argument('-n', '--files', type=int, help='Number of files to be processed',
+                        default=-1)
+
     args = parser.parse_args()
     # Creating folder names where data is stored.
 
     locations_list = []
 
     import re
+
     for m in args.locations.split(';'):
         locations_list.append(re.sub("[^0-9_a-zA-Z]+", "", re.sub('\s+', '_', m.strip())))
 
@@ -218,8 +241,8 @@ if __name__ == '__main__':
     update_global_variables()
 
     # Loading Libraries (this has to be load after "load_config" function)
-    from emotions_info import get_emotions
+    from emotions_info import Emotions
     from locations_info import geo_tagging
 
-    main(args.storage, locations_list, args.region, args.incremental)
+    main(args.storage, locations_list, args.region, args.incremental, args.files)
     print("--Processing Done")
